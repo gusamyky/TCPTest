@@ -5,7 +5,7 @@ import org.example.model.ExamResult;
 import org.example.model.Question;
 import org.example.model.StudentResponse;
 
-import java.io.*;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -70,29 +70,6 @@ public class FileHandler {
         } catch (IOException e) {
             System.err.println("Error saving exam result: " + e.getMessage());
         }
-    }
-    
-    public static List<StudentResponse> getStudentResponses(String studentId) {
-        List<StudentResponse> responses = new ArrayList<>();
-        
-        try {
-            Path responsesPath = Paths.get(RESPONSES_FILE);
-            if (Files.exists(responsesPath)) {
-                List<String> lines = Files.readAllLines(responsesPath);
-                for (String line : lines) {
-                    if (!line.trim().isEmpty()) {
-                        StudentResponse response = StudentResponse.fromFileFormat(line);
-                        if (response.getStudentId().equals(studentId)) {
-                            responses.add(response);
-                        }
-                    }
-                }
-            }
-        } catch (IOException e) {
-            System.err.println("Error loading student responses: " + e.getMessage());
-        }
-        
-        return responses;
     }
 }
 

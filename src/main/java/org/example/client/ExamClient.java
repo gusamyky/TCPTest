@@ -41,11 +41,7 @@ public class ExamClient {
             BufferedReader userInput = new BufferedReader(new InputStreamReader(System.in));
             String input;
             while (isRunning && (input = userInput.readLine()) != null) {
-                if (input.equalsIgnoreCase(ExamCommands.END_COMMAND)) {
-                    out.println(input);
-                } else {
-                    out.println(input);
-                }
+                out.println(input);
             }
 
         } catch (IOException e) {
@@ -79,8 +75,9 @@ public class ExamClient {
             }
         } finally {
             shutdown();
-            System.exit(0);
         }
+
+        System.exit(0);
     }
 
     private void shutdown() {

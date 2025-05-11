@@ -5,13 +5,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Question implements Serializable {
-    private int id;
-    private String content;
-    private List<String> options;
-    private List<Integer> correctAnswers;
-
-    public Question() {
-    }
+    private final int id;
+    private final String content;
+    private final List<String> options;
+    private final List<Integer> correctAnswers;
 
     public Question(int id, String content, List<String> options, List<Integer> correctAnswers) {
         this.id = id;
@@ -22,38 +19,6 @@ public class Question implements Serializable {
 
     public int getId() {
         return id;
-    }
-
-    public void setId(int id) {
-        this.id = id;
-    }
-
-    public String getContent() {
-        return content;
-    }
-
-    public void setContent(String content) {
-        this.content = content;
-    }
-
-    public List<String> getOptions() {
-        return options;
-    }
-
-    public void setOptions(List<String> options) {
-        this.options = options;
-    }
-
-    public List<Integer> getCorrectAnswers() {
-        return correctAnswers;
-    }
-
-    public void setCorrectAnswers(List<Integer> correctAnswers) {
-        this.correctAnswers = correctAnswers;
-    }
-
-    public boolean isCorrectAnswer(int answer) {
-        return correctAnswers.contains(answer);
     }
 
     public boolean isCorrectAnswer(List<Integer> answers) {
@@ -67,24 +32,6 @@ public class Question implements Serializable {
         for (int i = 0; i < options.size(); i++) {
             sb.append(i + 1).append(". ").append(options.get(i)).append("\n");
         }
-        return sb.toString();
-    }
-    
-    public String toFileFormat() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(id).append("|").append(content).append("|");
-        sb.append(String.join(";", options)).append("|");
-        
-        StringBuilder correctAnswersStr = new StringBuilder();
-        for (Integer answer : correctAnswers) {
-            correctAnswersStr.append(answer).append(",");
-        }
-        // Remove the last comma
-        if (!correctAnswersStr.isEmpty()) {
-            correctAnswersStr.deleteCharAt(correctAnswersStr.length() - 1);
-        }
-        
-        sb.append(correctAnswersStr);
         return sb.toString();
     }
     
