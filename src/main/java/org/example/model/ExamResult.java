@@ -18,6 +18,20 @@ public class ExamResult implements Serializable {
         this.score = totalQuestions > 0 ? ((double) correctAnswers / totalQuestions) * 100 : 0;
         this.examDate = LocalDateTime.now();
     }
+
+    public static ExamResult fromFileFormat(String line) {
+        String[] parts = line.split("\\|");
+        if (parts.length != 5) {
+            throw new IllegalArgumentException("Invalid result format: " + line);
+        }
+
+        String studentId = parts[0];
+        int correctAnswers = Integer.parseInt(parts[1]);
+        int totalQuestions = Integer.parseInt(parts[2]);
+
+        ExamResult result = new ExamResult(studentId, correctAnswers, totalQuestions);
+        return result;
+    }
     
     public String toFileFormat() {
         return String.format("%s|%d|%d|%.2f|%s", 
@@ -26,6 +40,10 @@ public class ExamResult implements Serializable {
                 totalQuestions, 
                 score, 
                 examDate.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+    }
+
+    public String getStudentId() {
+        return studentId;
     }
     
     @Override

@@ -2,7 +2,8 @@ package org.example.server;
 
 import org.example.config.Config;
 import org.example.model.Question;
-import org.example.util.FileHandler;
+import org.example.repository.QuestionRepository;
+import org.example.repository.RepositoryFactory;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -23,8 +24,9 @@ public class ExamServer {
         this.executor = Executors.newFixedThreadPool(MAX_CLIENTS);
         
         try {
-            this.questions = FileHandler.loadQuestions();
-        } catch (IOException e) {
+            QuestionRepository questionRepository = RepositoryFactory.getQuestionRepository();
+            this.questions = questionRepository.findAll();
+        } catch (Exception e) {
             throw new RuntimeException("Failed to load questions: " + e.getMessage(), e);
         }
     }

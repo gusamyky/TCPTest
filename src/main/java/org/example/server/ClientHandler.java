@@ -4,10 +4,15 @@ import org.example.config.Config;
 import org.example.model.ExamResult;
 import org.example.model.Question;
 import org.example.model.StudentResponse;
+import org.example.repository.ExamResultRepository;
+import org.example.repository.RepositoryFactory;
+import org.example.repository.StudentResponseRepository;
 import org.example.util.ExamCommands;
-import org.example.util.FileHandler;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,6 +22,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class ClientHandler implements Runnable {
     private final Socket clientSocket;
     private final List<Question> questions;
+    private final ExamResultRepository examResultRepository;
+    private final StudentResponseRepository studentResponseRepository;
     private PrintWriter out;
     private BufferedReader in;
     private final int answerTimeoutSeconds;
@@ -25,6 +32,8 @@ public class ClientHandler implements Runnable {
     public ClientHandler(Socket clientSocket, List<Question> questions) {
         this.clientSocket = clientSocket;
         this.questions = questions;
+        this.examResultRepository = RepositoryFactory.getExamResultRepository();
+        this.studentResponseRepository = RepositoryFactory.getStudentResponseRepository();
         this.answerTimeoutSeconds = Config.getAnswerTimeoutSeconds();
         this.executor = Executors.newFixedThreadPool(2);
     }
@@ -115,10 +124,6 @@ public class ClientHandler implements Runnable {
             Thread.sleep(500);
         }
 
-        ExamResult result = new ExamResult(studentId, correctAnswers, totalQuestions);
-        FileHandler.saveExamResult(result);
-        out.println(result.toString());
-        
         return correctAnswers;
     }
 
@@ -195,29 +200,45 @@ public class ClientHandler implements Runnable {
     }
 
     private void handleTimeout(String studentId, Question question) {
-        StudentResponse response = new StudentResponse(studentId, question.getId(), new ArrayList<>());
-        FileHandler.saveStudentResponse(response);
-        out.println(ExamCommands.NEXT_QUESTION_COMMAND);
+        try {
+            StudentResponse response = new StudentResponse(studentId, question.getId(), new ArrayList<>());
+            studentResponseRepository.save(response);
+            out.println(ExamCommands.NEXT_QUESTION_COMMAND);
+        } catch (Exception e) {
+            System.err.println("Error saving timeout response: " + e.getMessage());
+        }
     }
 
     private void handleSkippedQuestion(String studentId, Question question) {
-        StudentResponse response = new StudentResponse(studentId, question.getId(), new ArrayList<>());
-        FileHandler.saveStudentResponse(response);
-        out.println(ExamCommands.NEXT_QUESTION_COMMAND);
+        try {
+            StudentResponse response = new StudentResponse(studentId, question.getId(), new ArrayList<>());
+            studentResponseRepository.save(response);
+            out.println(ExamCommands.NEXT_QUESTION_COMMAND);
+        } catch (Exception e) {
+            System.err.println("Error saving skipped response: " + e.getMessage());
+        }
     }
 
     private int handleAnswer(String studentId, Question question, String response) {
-        List<Integer> selectedAnswers = parseAnswers(response);
-        StudentResponse studentResponse = new StudentResponse(studentId, question.getId(), selectedAnswers);
-        FileHandler.saveStudentResponse(studentResponse);
-        
-        return question.isCorrectAnswer(selectedAnswers) ? 1 : 0;
+        try {
+            List<Integer> selectedAnswers = parseAnswers(response);
+            StudentResponse studentResponse = new StudentResponse(studentId, question.getId(), selectedAnswers);
+            studentResponseRepository.save(studentResponse);
+            return question.isCorrectAnswer(selectedAnswers) ? 1 : 0;
+        } catch (Exception e) {
+            System.err.println("Error saving student response: " + e.getMessage());
+            return 0;
+        }
     }
 
     private void sendResults(String studentId, int correctAnswers) {
-        ExamResult result = new ExamResult(studentId, correctAnswers, questions.size());
-        FileHandler.saveExamResult(result);
-        out.println(result.toString());
+        try {
+            ExamResult result = new ExamResult(studentId, correctAnswers, questions.size());
+            examResultRepository.save(result);
+            out.println(result);
+        } catch (Exception e) {
+            System.err.println("Error saving exam result: " + e.getMessage());
+        }
     }
 
     private List<Integer> parseAnswers(String answersStr) {
