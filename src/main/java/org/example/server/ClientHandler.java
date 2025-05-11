@@ -4,6 +4,7 @@ import org.example.config.Config;
 import org.example.model.ExamResult;
 import org.example.model.Question;
 import org.example.model.StudentResponse;
+import org.example.util.ExamCommands;
 import org.example.util.FileHandler;
 
 import java.io.*;
@@ -18,138 +19,209 @@ public class ClientHandler implements Runnable {
     private final List<Question> questions;
     private PrintWriter out;
     private BufferedReader in;
-    private final int ANSWER_TIMEOUT_SECONDS;
+    private final int answerTimeoutSeconds;
+    private final ExecutorService executor;
 
     public ClientHandler(Socket clientSocket, List<Question> questions) {
         this.clientSocket = clientSocket;
         this.questions = questions;
-        this.ANSWER_TIMEOUT_SECONDS = Config.getAnswerTimeoutSeconds();
+        this.answerTimeoutSeconds = Config.getAnswerTimeoutSeconds();
+        this.executor = Executors.newFixedThreadPool(2);
     }
 
     @Override
     public void run() {
+        String studentId = null;
         try {
-            out = new PrintWriter(clientSocket.getOutputStream(), true);
-            in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+            initializeConnection();
+            studentId = getStudentId();
+            sendWelcomeMessage(studentId);
+            
+            int correctAnswers = processQuestions(studentId);
+            sendResults(studentId, correctAnswers);
 
-            // Get student ID
-            out.println("Podaj swój numer indeksu:");
-            String studentId = in.readLine();
+        } catch (IOException e) {
+            System.err.println("Error handling client: " + e.getMessage());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            System.err.println("Client handler interrupted: " + e.getMessage());
+        } finally {
+            shutdown();
+        }
+    }
 
-            out.println("Witaj, " + studentId + "! Rozpoczynamy test.");
-            out.println("Na każde pytanie masz " + ANSWER_TIMEOUT_SECONDS + " sekund.");
-            out.println("Aby odpowiedzieć na pytanie, wpisz numer(y) odpowiedzi oddzielone przecinkami, np. 1,3");
-            out.println("Aby zakończyć test wcześniej, wpisz 'koniec'");
-            out.println("Naciśnij ENTER, aby rozpocząć...");
-            in.readLine();
+    private void initializeConnection() throws IOException {
+        out = new PrintWriter(clientSocket.getOutputStream(), true);
+        in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+    }
 
-            int correctAnswers = 0;
-            ExecutorService executor = Executors.newFixedThreadPool(2);
+    private String getStudentId() throws IOException {
+        out.println("Podaj swój numer indeksu:");
+        String studentId = in.readLine();
+        if (studentId == null || studentId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Invalid student ID");
+        }
+        return studentId;
+    }
 
-            for (Question question : questions) {
-                out.println(question.toString());
-                out.println("Twoja odpowiedź (oddziel liczby przecinkami, np. 1,3):");
+    private void sendWelcomeMessage(String studentId) throws IOException {
+        out.println("Witaj, " + studentId + "! Rozpoczynamy test.");
+        out.println("Na każde pytanie masz " + answerTimeoutSeconds + " sekund.");
+        out.println("Aby odpowiedzieć na pytanie, wpisz numer(y) odpowiedzi oddzielone przecinkami, np. 1,3");
+        out.println("Aby pominąć pytanie, wpisz '" + ExamCommands.SKIP_COMMAND + "'");
+        out.println("Aby zakończyć test wcześniej, wpisz '" + ExamCommands.END_COMMAND + "'");
+        out.println("Naciśnij ENTER, aby rozpocząć...");
+        in.readLine();
+    }
+
+    private int processQuestions(String studentId) throws IOException, InterruptedException {
+        int correctAnswers = 0;
+        int totalQuestions = questions.size();
+        boolean testEnded = false;
+        
+        for (int i = 0; i < totalQuestions; i++) {
+            if (testEnded) {
+                break;
+            }
+            
+            Question question = questions.get(i);
+            out.println("\nPytanie " + (i + 1) + " z " + totalQuestions + ":");
+            out.println(question.toString());
+            out.println("Twoja odpowiedź (oddziel liczby przecinkami, np. 1,3):");
+            
+            String response;
+            do {
+                response = getStudentResponse();
                 
-                // Signal for timeout and response
-                CountDownLatch responseLatch = new CountDownLatch(1);
-                AtomicBoolean timeoutOccurred = new AtomicBoolean(false);
-                
-                // Response holder
-                String[] responseHolder = new String[1];
-                
-                // Task to get user input
-                Future<?> inputFuture = executor.submit(() -> {
-                    try {
-                        String input = in.readLine();
-                        // Only process the input if we haven't timed out yet
-                        if (!timeoutOccurred.get()) {
-                            responseHolder[0] = input;
-                            responseLatch.countDown(); // Signal that response is received
-                        }
-                        return input;
-                    } catch (IOException e) {
-                        // Handle exception
-                        return null;
-                    }
-                });
-                
-                // Task for timeout
-                executor.submit(() -> {
-                    try {
-                        boolean received = responseLatch.await(ANSWER_TIMEOUT_SECONDS, TimeUnit.SECONDS);
-                        if (!received) {
-                            timeoutOccurred.set(true);
-                            out.println("TIMEOUT");
-                            // Cancel the input task
-                            inputFuture.cancel(true);
-                            // Clear any pending input - fix for BufferedReader which doesn't have available() method
-                            try {
-                                // Skip chars by reading them until ready() returns false
-                                while (in.ready()) {
-                                    in.read();
-                                }
-                            } catch (IOException ignored) {
-                                // Ignore any exceptions during cleanup
-                            }
-                            // Force countdown to proceed to next question
-                            responseLatch.countDown();
-                        }
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                    }
-                });
-                
-                // Wait for either response or timeout
-                responseLatch.await();
-                
-                String response = responseHolder[0];
-                
-                if (timeoutOccurred.get() || response == null) {
-                    // Record an empty response due to timeout
-                    StudentResponse studentResponse = new StudentResponse(
-                            studentId, question.getId(), new ArrayList<>());
-                    FileHandler.saveStudentResponse(studentResponse);
-                    
-                    // Send a clear message to client that we're moving to next question
-                    out.println("MOVING_TO_NEXT_QUESTION");
-                } else if (response.equalsIgnoreCase("koniec")) {
-                    out.println("Test zakończony przedwcześnie.");
+                if (response == null) {
+                    handleTimeout(studentId, question);
                     break;
-                } else {
-                    // Parse student's answer
-                    List<Integer> selectedAnswers = parseAnswers(response);
-                    
-                    // Record the student's response
-                    StudentResponse studentResponse = new StudentResponse(
-                            studentId, question.getId(), selectedAnswers);
-                    FileHandler.saveStudentResponse(studentResponse);
+                } else if (response.equalsIgnoreCase(ExamCommands.END_COMMAND)) {
+                    out.println("Test zakończony przedwcześnie.");
+                    testEnded = true;
+                    break;
+                } else if (response.equalsIgnoreCase(ExamCommands.SKIP_COMMAND)) {
+                    handleSkippedQuestion(studentId, question);
+                    break;
+                } else if (!isValidResponse(response)) {
+                    out.println("Nieprawidłowa odpowiedź. Wprowadź numery odpowiedzi oddzielone przecinkami (np. 1,3) lub wpisz 'pomijam'/'koniec'.");
+                    continue;
+                }
+                
+                correctAnswers += handleAnswer(studentId, question, response);
+                break;
+            } while (true);
 
-                    // Check if the answer is correct
-                    if (question.isCorrectAnswer(selectedAnswers)) {
-                        correctAnswers++;
-                    }
+            Thread.sleep(500);
+        }
+
+        ExamResult result = new ExamResult(studentId, correctAnswers, totalQuestions);
+        FileHandler.saveExamResult(result);
+        out.println(result.toString());
+        
+        return correctAnswers;
+    }
+
+    private String getStudentResponse() throws InterruptedException {
+        CountDownLatch responseLatch = new CountDownLatch(1);
+        AtomicBoolean timeoutOccurred = new AtomicBoolean(false);
+        String[] responseHolder = new String[1];
+        
+        Future<?> inputFuture = executor.submit(() -> {
+            try {
+                String input = in.readLine();
+                if (!timeoutOccurred.get()) {
+                    responseHolder[0] = input;
+                    responseLatch.countDown();
+                }
+                return input;
+            } catch (IOException e) {
+                System.err.println("Error reading student response: " + e.getMessage());
+                return null;
+            }
+        });
+        
+        executor.submit(() -> {
+            try {
+                if (!responseLatch.await(answerTimeoutSeconds, TimeUnit.SECONDS)) {
+                    timeoutOccurred.set(true);
+                    out.println(ExamCommands.TIMEOUT_COMMAND);
+                    inputFuture.cancel(true);
+                    clearPendingInput();
+                    responseLatch.countDown();
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        });
+        
+        responseLatch.await();
+        return responseHolder[0];
+    }
+
+    private boolean isValidResponse(String response) {
+        if (response == null) return false;
+        response = response.trim();
+
+        // Check for special commands
+        if (response.equalsIgnoreCase(ExamCommands.END_COMMAND) || 
+            response.equalsIgnoreCase(ExamCommands.SKIP_COMMAND)) {
+            return true;
+        }
+
+        // Check for valid answer format
+        try {
+            String[] parts = response.split(",");
+            for (String part : parts) {
+                int num = Integer.parseInt(part.trim());
+                if (num < 1 || num > 4) {
+                    return false;
                 }
             }
-
-            executor.shutdownNow();
-
-            // Calculate and save the result
-            ExamResult result = new ExamResult(studentId, correctAnswers, questions.size());
-            FileHandler.saveExamResult(result);
-
-            // Send result to the client
-            out.println(result.toString());
-
-        } catch (IOException | InterruptedException e) {
-            System.err.println("Error handling client: " + e.getMessage());
-        } finally {
-            closeConnection();
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
         }
+    }
+
+    private void clearPendingInput() {
+        try {
+            while (in.ready()) {
+                in.read();
+            }
+        } catch (IOException ignored) {
+            // Ignore cleanup errors
+        }
+    }
+
+    private void handleTimeout(String studentId, Question question) {
+        StudentResponse response = new StudentResponse(studentId, question.getId(), new ArrayList<>());
+        FileHandler.saveStudentResponse(response);
+        out.println(ExamCommands.NEXT_QUESTION_COMMAND);
+    }
+
+    private void handleSkippedQuestion(String studentId, Question question) {
+        StudentResponse response = new StudentResponse(studentId, question.getId(), new ArrayList<>());
+        FileHandler.saveStudentResponse(response);
+        out.println(ExamCommands.NEXT_QUESTION_COMMAND);
+    }
+
+    private int handleAnswer(String studentId, Question question, String response) {
+        List<Integer> selectedAnswers = parseAnswers(response);
+        StudentResponse studentResponse = new StudentResponse(studentId, question.getId(), selectedAnswers);
+        FileHandler.saveStudentResponse(studentResponse);
+        
+        return question.isCorrectAnswer(selectedAnswers) ? 1 : 0;
+    }
+
+    private void sendResults(String studentId, int correctAnswers) {
+        ExamResult result = new ExamResult(studentId, correctAnswers, questions.size());
+        FileHandler.saveExamResult(result);
+        out.println(result.toString());
     }
 
     private List<Integer> parseAnswers(String answersStr) {
         List<Integer> results = new ArrayList<>();
-        
         try {
             if (!answersStr.trim().isEmpty()) {
                 String[] parts = answersStr.split(",");
@@ -160,15 +232,15 @@ public class ClientHandler implements Runnable {
         } catch (NumberFormatException e) {
             System.err.println("Error parsing student answers: " + e.getMessage());
         }
-        
         return results;
     }
 
-    private void closeConnection() {
+    private void shutdown() {
         try {
             if (out != null) out.close();
             if (in != null) in.close();
             if (clientSocket != null) clientSocket.close();
+            if (executor != null) executor.shutdownNow();
         } catch (IOException e) {
             System.err.println("Error closing client connection: " + e.getMessage());
         }

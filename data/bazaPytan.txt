@@ -1,3 +1,0 @@
-1|Co to jest Java?|Rodzaj kawy;Język programowania;System operacyjny;Wyspa w Indonezji|2
-2|Które z poniższych są językami programowania?|Python;Oracle;C++;HTML|1,3
-3|Co to jest TCP?|Protokół warstwy transportowej;Protokół routingu;Protokół warstwy aplikacji;System plików|1

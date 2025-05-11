@@ -1,17 +1,14 @@
 package org.example.model;
 
 import java.io.Serializable;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 
 public class Question implements Serializable {
-    private int id;
-    private String content;
-    private List<String> options;
-    private List<Integer> correctAnswers;
-
-    public Question() {
-    }
+    private final int id;
+    private final String content;
+    private final List<String> options;
+    private final List<Integer> correctAnswers;
 
     public Question(int id, String content, List<String> options, List<Integer> correctAnswers) {
         this.id = id;
@@ -22,38 +19,6 @@ public class Question implements Serializable {
 
     public int getId() {
         return id;
-    }
-
-    public void setId(int id) {
-        this.id = id;
-    }
-
-    public String getContent() {
-        return content;
-    }
-
-    public void setContent(String content) {
-        this.content = content;
-    }
-
-    public List<String> getOptions() {
-        return options;
-    }
-
-    public void setOptions(List<String> options) {
-        this.options = options;
-    }
-
-    public List<Integer> getCorrectAnswers() {
-        return correctAnswers;
-    }
-
-    public void setCorrectAnswers(List<Integer> correctAnswers) {
-        this.correctAnswers = correctAnswers;
-    }
-
-    public boolean isCorrectAnswer(int answer) {
-        return correctAnswers.contains(answer);
     }
 
     public boolean isCorrectAnswer(List<Integer> answers) {
@@ -70,35 +35,40 @@ public class Question implements Serializable {
         return sb.toString();
     }
     
-    public String toFileFormat() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(id).append("|").append(content).append("|");
-        sb.append(String.join(";", options)).append("|");
-        
-        StringBuilder correctAnswersStr = new StringBuilder();
-        for (Integer answer : correctAnswers) {
-            correctAnswersStr.append(answer).append(",");
+    public static Question fromFileFormat(String block) {
+        String[] lines = block.split("\n");
+        if (lines.length < 6) {
+            throw new IllegalArgumentException("Invalid question format: " + block);
         }
-        // Remove the last comma
-        if (correctAnswersStr.length() > 0) {
-            correctAnswersStr.deleteCharAt(correctAnswersStr.length() - 1);
+
+        // Parse question ID and content
+        String firstLine = lines[0];
+        int id = Integer.parseInt(firstLine.substring(0, firstLine.indexOf('.')));
+        String content = firstLine.substring(firstLine.indexOf('.') + 1).trim();
+
+        // Parse options
+        List<String> options = new ArrayList<>();
+        for (int i = 1; i <= 4; i++) {
+            String option = lines[i].substring(lines[i].indexOf(')') + 1).trim();
+            options.add(option);
         }
-        
-        sb.append(correctAnswersStr);
-        return sb.toString();
-    }
-    
-    public static Question fromFileFormat(String line) {
-        String[] parts = line.split("\\|");
-        int id = Integer.parseInt(parts[0]);
-        String content = parts[1];
-        List<String> options = Arrays.asList(parts[2].split(";"));
-        
-        String[] correctAnswersStr = parts[3].split(",");
-        List<Integer> correctAnswers = Arrays.stream(correctAnswersStr)
-                .map(Integer::parseInt)
-                .toList();
-        
+
+        // Parse correct answers
+        String correctAnswersStr = lines[5].trim();
+        List<Integer> correctAnswers = new ArrayList<>();
+        String[] answers = correctAnswersStr.split(",");
+        for (String answer : answers) {
+            answer = answer.trim().toLowerCase();
+            int correctIndex = switch (answer) {
+                case "a" -> 1;
+                case "b" -> 2;
+                case "c" -> 3;
+                case "d" -> 4;
+                default -> throw new IllegalArgumentException("Invalid correct answer: " + answer);
+            };
+            correctAnswers.add(correctIndex);
+        }
+
         return new Question(id, content, options, correctAnswers);
     }
 }
