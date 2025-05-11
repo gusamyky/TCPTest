@@ -1,0 +1,139 @@
+1. Co to jest zmienna w programowaniu?
+a) Stała wartość, której nie można zmienić
+b) Nazwany obszar pamięci przechowujący dane, które mogą się zmieniać
+c) Funkcja matematyczna
+d) Typ danych
+b
+
+2. Które z poniższych typów danych w Javie są typami prostymi (prymitywnymi)?
+a) String
+b) int
+c) boolean
+d) double
+b,c,d
+
+3. Co oznacza skrót HTTP?
+a) Hyper Text Transfer Protocol
+b) High Tech Transfer Protocol
+c) Hyper Transfer Text Protocol
+d) High Text Transfer Protocol
+a
+
+4. Które z poniższych operatorów w Javie służą do porównania referencji obiektów?
+a) ==
+b) equals()
+c) compareTo()
+d) instanceof
+a,d
+
+5. Co to jest rekurencja?
+a) Pętla w programowaniu
+b) Funkcja wywołująca samą siebie
+c) Struktura danych
+d) Typ algorytmu sortowania
+b
+
+6. Które z poniższych protokołów są bezpieczniejszą wersją HTTP?
+a) FTP
+b) SMTP
+c) HTTPS
+d) HTTP/2
+c,d
+
+7. Co to jest git?
+a) System operacyjny
+b) System kontroli wersji
+c) Język programowania
+d) Baza danych
+b
+
+8. Które z poniższych wzorców projektowych są wzorcami kreacyjnymi?
+a) Observer
+b) Singleton
+c) Factory
+d) Builder
+b,c,d
+
+9. Co to jest REST API?
+a) System operacyjny
+b) Język programowania
+c) Architektura oprogramowania
+d) Baza danych
+c
+
+10. Które z poniższych typów kolekcji w Javie nie pozwalają na duplikaty?
+a) ArrayList
+b) LinkedList
+c) HashSet
+d) TreeSet
+c,d
+
+11. Co to jest Docker?
+a) System operacyjny
+b) Platforma do konteneryzacji aplikacji
+c) Język programowania
+d) Baza danych
+b
+
+12. Które z poniższych protokołów są używane do wysyłania e-maili?
+a) HTTP
+b) FTP
+c) SMTP
+d) POP3
+c,d
+
+13. Co to jest JVM?
+a) Java Virtual Machine
+b) Java Visual Machine
+c) Java Version Manager
+d) Java Virtual Memory
+a
+
+14. Które z poniższych typów danych w Javie są używane do przechowywania liczb zmiennoprzecinkowych?
+a) int
+b) long
+c) float
+d) double
+c,d
+
+15. Co to jest SQL?
+a) Structured Query Language
+b) Simple Query Language
+c) Standard Query Language
+d) System Query Language
+a
+
+16. Które z poniższych wzorców projektowych są wzorcami strukturalnymi?
+a) Factory
+b) Observer
+c) Adapter
+d) Decorator
+c,d
+
+17. Co to jest TCP/IP?
+a) Język programowania
+b) System operacyjny
+c) Protokół komunikacyjny
+d) Baza danych
+c
+
+18. Które z poniższych operatorów w Javie służą do sprawdzenia typu obiektu?
+a) ==
+b) equals()
+c) instanceof
+d) getClass()
+c,d
+
+19. Co to jest Spring Framework?
+a) System operacyjny
+b) Framework do tworzenia aplikacji w Javie
+c) Język programowania
+d) Baza danych
+b
+
+20. Które z poniższych typów kolekcji w Javie są synchronizowane?
+a) ArrayList
+b) LinkedList
+c) Vector
+d) Hashtable
+c,d 

@@ -1,134 +1,109 @@
 package org.example.client;
 
 import org.example.config.Config;
+import org.example.util.ExamCommands;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
-import java.util.Scanner;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class ExamClient {
-
     private final String serverAddress;
     private final int serverPort;
     private Socket socket;
     private PrintWriter out;
     private BufferedReader in;
-    private final Scanner scanner;
-    private ExecutorService executor;
-    private volatile boolean inExam = false;
+    private final ExecutorService executor;
+    private volatile boolean isRunning;
 
     public ExamClient(String serverAddress, int serverPort) {
         this.serverAddress = serverAddress;
         this.serverPort = serverPort;
-        this.scanner = new Scanner(System.in);
-        this.executor = Executors.newCachedThreadPool();
-    }
-
-    public static void main(String[] args) {
-        String serverAddress = "localhost";
-        int serverPort = Config.getServerPort();
-
-        System.out.println("Łączenie z serwerem egzaminacyjnym...");
-        ExamClient client = new ExamClient(serverAddress, serverPort);
-        client.start();
+        this.executor = Executors.newFixedThreadPool(2);
+        this.isRunning = true;
     }
 
     public void start() {
         try {
-            connectToServer();
+            System.out.println("Łączenie z serwerem egzaminacyjnym...");
+            socket = new Socket(serverAddress, serverPort);
+            out = new PrintWriter(socket.getOutputStream(), true);
+            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            System.out.println("Connected to exam server at " + serverAddress + ":" + serverPort);
 
-            AtomicBoolean waitingForInput = new AtomicBoolean(false);
-            
-            // Thread for handling server messages
-            executor.submit(() -> {
-                try {
-                    String fromServer;
-                    while ((fromServer = in.readLine()) != null) {
-                        // Check if we got a timeout message
-                        if (fromServer.equals("TIMEOUT")) {
-                            System.out.println("\nCzas na odpowiedź minął! Przechodzimy do następnego pytania.");
-                            waitingForInput.set(false);
-                            continue;
-                        }
-                        
-                        // Check if we're moving to next question after timeout
-                        if (fromServer.equals("MOVING_TO_NEXT_QUESTION")) {
-                            continue;
-                        }
-                        
-                        System.out.println(fromServer);
-                        
-                        // Test is finished when the result is received
-                        if (fromServer.contains("Wynik testu")) {
-                            inExam = false;
-                            break;
-                        }
-                        
-                        // If the server expects an answer
-                        if (fromServer.contains("odpowiedź")) {
-                            waitingForInput.set(true);
-                            System.out.print("> ");
-                        } else if ((fromServer.contains("Podaj") || fromServer.contains("Naciśnij ENTER"))) {
-                            waitingForInput.set(true);
-                            System.out.print("> ");
-                        }
-                    }
-                } catch (IOException e) {
-                    if (inExam) {
-                        System.err.println("Utracono połączenie z serwerem: " + e.getMessage());
-                    }
-                }
-                return null;
-            });
-            
-            // Thread for handling user input
-            inExam = true;
-            while (inExam) {
-                if (waitingForInput.get()) {
-                    String input = scanner.nextLine();
+            executor.submit(this::readServerResponses);
+
+            BufferedReader userInput = new BufferedReader(new InputStreamReader(System.in));
+            String input;
+            while (isRunning && (input = userInput.readLine()) != null) {
+                if (input.equalsIgnoreCase(ExamCommands.END_COMMAND)) {
                     out.println(input);
-                    waitingForInput.set(false);
-                    
-                    if (input.equalsIgnoreCase("koniec")) {
-                        System.out.println("Zakończono test przedwcześnie.");
-                        inExam = false;
-                        break;
-                    }
+                } else {
+                    out.println(input);
                 }
-                
-                // Small delay to prevent CPU spinning
-                TimeUnit.MILLISECONDS.sleep(50);
             }
 
-        } catch (IOException | InterruptedException e) {
+        } catch (IOException e) {
             System.err.println("Error during exam: " + e.getMessage());
         } finally {
-            closeConnection();
+            shutdown();
         }
     }
 
-    private void connectToServer() throws IOException {
-        socket = new Socket(serverAddress, serverPort);
-        out = new PrintWriter(socket.getOutputStream(), true);
-        in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-        System.out.println("Connected to exam server at " + serverAddress + ":" + serverPort);
+    private void readServerResponses() {
+        try {
+            String response;
+            while (isRunning && (response = in.readLine()) != null) {
+                if (response.equals(ExamCommands.TIMEOUT_COMMAND)) {
+                    System.out.println("\nCzas na odpowiedź minął! Przechodzimy do następnego pytania.");
+                } else if (response.equals(ExamCommands.NEXT_QUESTION_COMMAND)) {
+                    System.out.print("> ");
+                } else if (response.startsWith("Wynik testu:")) {
+                    System.out.println(response);
+                    isRunning = false;
+                    break;
+                } else if (response.equals("Test zakończony przedwcześnie.")) {
+                    System.out.println(response);
+                } else {
+                    System.out.println(response);
+                }
+            }
+        } catch (IOException e) {
+            if (isRunning) {
+                System.err.println("Utracono połączenie z serwerem: " + e.getMessage());
+            }
+        } finally {
+            shutdown();
+            System.exit(0);
+        }
     }
 
-    private void closeConnection() {
+    private void shutdown() {
+        isRunning = false;
         try {
-            if (executor != null) executor.shutdownNow();
-            if (scanner != null) scanner.close();
             if (out != null) out.close();
             if (in != null) in.close();
             if (socket != null) socket.close();
-            System.out.println("Disconnected from server");
-        } catch (IOException e) {
+            if (executor != null) {
+                executor.shutdown();
+                if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
+                    executor.shutdownNow();
+                }
+            }
+        } catch (IOException | InterruptedException e) {
             System.err.println("Error closing connection: " + e.getMessage());
         }
+    }
+
+    public static void main(String[] args) {
+        String serverAddress = Config.getServerAddress();
+        int serverPort = Config.getServerPort();
+        ExamClient client = new ExamClient(serverAddress, serverPort);
+        client.start();
     }
 }

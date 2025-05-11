@@ -7,6 +7,7 @@ public class Main {
     public static void main(String[] args) {
         int port = Config.getServerPort();
         ExamServer server = new ExamServer(port);
+
         server.start();
     }
 }

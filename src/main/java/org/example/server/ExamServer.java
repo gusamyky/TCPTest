@@ -13,16 +13,20 @@ import java.util.concurrent.Executors;
 
 public class ExamServer {
     private final int port;
-    private final int MAX_CLIENTS;
     private boolean running;
-    private List<Question> questions;
-    private ExecutorService executor;
+    private final List<Question> questions;
+    private final ExecutorService executor;
 
     public ExamServer(int port) {
         this.port = port;
-        this.MAX_CLIENTS = Config.getMaxClients();
+        int MAX_CLIENTS = Config.getMaxClients();
         this.executor = Executors.newFixedThreadPool(MAX_CLIENTS);
-        this.questions = FileHandler.loadQuestions();
+        
+        try {
+            this.questions = FileHandler.loadQuestions();
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to load questions: " + e.getMessage(), e);
+        }
     }
 
     public void start() {

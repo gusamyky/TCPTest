@@ -1,7 +1,7 @@
 package org.example.model;
 
 import java.io.Serializable;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 
 public class Question implements Serializable {
@@ -80,7 +80,7 @@ public class Question implements Serializable {
             correctAnswersStr.append(answer).append(",");
         }
         // Remove the last comma
-        if (correctAnswersStr.length() > 0) {
+        if (!correctAnswersStr.isEmpty()) {
             correctAnswersStr.deleteCharAt(correctAnswersStr.length() - 1);
         }
         
@@ -88,17 +88,40 @@ public class Question implements Serializable {
         return sb.toString();
     }
     
-    public static Question fromFileFormat(String line) {
-        String[] parts = line.split("\\|");
-        int id = Integer.parseInt(parts[0]);
-        String content = parts[1];
-        List<String> options = Arrays.asList(parts[2].split(";"));
-        
-        String[] correctAnswersStr = parts[3].split(",");
-        List<Integer> correctAnswers = Arrays.stream(correctAnswersStr)
-                .map(Integer::parseInt)
-                .toList();
-        
+    public static Question fromFileFormat(String block) {
+        String[] lines = block.split("\n");
+        if (lines.length < 6) {
+            throw new IllegalArgumentException("Invalid question format: " + block);
+        }
+
+        // Parse question ID and content
+        String firstLine = lines[0];
+        int id = Integer.parseInt(firstLine.substring(0, firstLine.indexOf('.')));
+        String content = firstLine.substring(firstLine.indexOf('.') + 1).trim();
+
+        // Parse options
+        List<String> options = new ArrayList<>();
+        for (int i = 1; i <= 4; i++) {
+            String option = lines[i].substring(lines[i].indexOf(')') + 1).trim();
+            options.add(option);
+        }
+
+        // Parse correct answers
+        String correctAnswersStr = lines[5].trim();
+        List<Integer> correctAnswers = new ArrayList<>();
+        String[] answers = correctAnswersStr.split(",");
+        for (String answer : answers) {
+            answer = answer.trim().toLowerCase();
+            int correctIndex = switch (answer) {
+                case "a" -> 1;
+                case "b" -> 2;
+                case "c" -> 3;
+                case "d" -> 4;
+                default -> throw new IllegalArgumentException("Invalid correct answer: " + answer);
+            };
+            correctAnswers.add(correctIndex);
+        }
+
         return new Question(id, content, options, correctAnswers);
     }
 }
