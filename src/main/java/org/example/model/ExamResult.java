@@ -29,8 +29,7 @@ public class ExamResult implements Serializable {
         int correctAnswers = Integer.parseInt(parts[1]);
         int totalQuestions = Integer.parseInt(parts[2]);
 
-        ExamResult result = new ExamResult(studentId, correctAnswers, totalQuestions);
-        return result;
+        return new ExamResult(studentId, correctAnswers, totalQuestions);
     }
     
     public String toFileFormat() {

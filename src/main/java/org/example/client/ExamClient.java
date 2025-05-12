@@ -30,11 +30,9 @@ public class ExamClient {
 
     public void start() {
         try {
-            System.out.println("Łączenie z serwerem egzaminacyjnym...");
-            socket = new Socket(serverAddress, serverPort);
-            out = new PrintWriter(socket.getOutputStream(), true);
-            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            System.out.println("Connected to exam server at " + serverAddress + ":" + serverPort);
+            if (!connectToServer()) {
+                return;
+            }
 
             executor.submit(this::readServerResponses);
 
@@ -48,6 +46,20 @@ public class ExamClient {
             System.err.println("Error during exam: " + e.getMessage());
         } finally {
             shutdown();
+        }
+    }
+
+    private boolean connectToServer() {
+        try {
+            System.out.println("Łączenie z serwerem egzaminacyjnym...");
+            socket = new Socket(serverAddress, serverPort);
+            out = new PrintWriter(socket.getOutputStream(), true);
+            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            System.out.println("Connected to exam server at " + serverAddress + ":" + serverPort);
+            return true;
+        } catch (IOException e) {
+            System.err.println("Failed to connect to the server: " + e.getMessage());
+            return false;
         }
     }
 
