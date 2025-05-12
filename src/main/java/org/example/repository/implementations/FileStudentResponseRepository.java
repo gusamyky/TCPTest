@@ -1,7 +1,8 @@
-package org.example.repository;
+package org.example.repository.implementations;
 
 import org.example.config.Config;
 import org.example.model.StudentResponse;
+import org.example.repository.interfaces.StudentResponseRepository;
 
 import java.nio.file.Files;
 import java.nio.file.Path;

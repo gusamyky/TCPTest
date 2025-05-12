@@ -1,13 +1,15 @@
-package org.example.repository;
+package org.example.repository.implementations;
 
 import org.example.config.Config;
 import org.example.model.Question;
+import org.example.repository.interfaces.QuestionRepository;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class FileQuestionRepository implements QuestionRepository {
@@ -28,23 +30,23 @@ public class FileQuestionRepository implements QuestionRepository {
 
         for (String line : lines) {
             if (line.trim().isEmpty()) {
-                if (currentBlock.length() > 0) {
+                if (!currentBlock.isEmpty()) {
                     questions.add(Question.fromFileFormat(currentBlock.toString()));
                     currentBlock = new StringBuilder();
                 }
             } else {
-                if (currentBlock.length() > 0) {
+                if (!currentBlock.isEmpty()) {
                     currentBlock.append("\n");
                 }
                 currentBlock.append(line);
             }
         }
 
-        if (currentBlock.length() > 0) {
+        if (!currentBlock.isEmpty()) {
             questions.add(Question.fromFileFormat(currentBlock.toString()));
         }
 
-        return questions;
+        return Collections.unmodifiableList(questions);
     }
 
     @Override

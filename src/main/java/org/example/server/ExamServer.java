@@ -2,7 +2,7 @@ package org.example.server;
 
 import org.example.config.Config;
 import org.example.model.Question;
-import org.example.repository.QuestionRepository;
+import org.example.repository.interfaces.QuestionRepository;
 import org.example.repository.RepositoryFactory;
 
 import java.io.IOException;
@@ -43,7 +43,7 @@ public class ExamServer {
                     Socket clientSocket = serverSocket.accept();
                     System.out.println("New client connected: " + clientSocket.getInetAddress().getHostAddress());
                     
-                    // Create a new client handler and execute it in a separate thread
+                    // Create a new client handler and execute it in a separate thread.
                     ClientHandler clientHandler = new ClientHandler(clientSocket, questions);
                     executor.execute(clientHandler);
                     

@@ -4,9 +4,9 @@ import org.example.config.Config;
 import org.example.model.ExamResult;
 import org.example.model.Question;
 import org.example.model.StudentResponse;
-import org.example.repository.ExamResultRepository;
+import org.example.repository.interfaces.ExamResultRepository;
 import org.example.repository.RepositoryFactory;
-import org.example.repository.StudentResponseRepository;
+import org.example.repository.interfaces.StudentResponseRepository;
 import org.example.util.ExamCommands;
 
 import java.io.BufferedReader;

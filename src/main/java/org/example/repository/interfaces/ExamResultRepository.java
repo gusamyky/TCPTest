@@ -1,4 +1,4 @@
-package org.example.repository;
+package org.example.repository.interfaces;
 
 import org.example.model.ExamResult;
 
