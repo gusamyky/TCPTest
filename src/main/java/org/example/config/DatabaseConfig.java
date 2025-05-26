@@ -55,4 +55,8 @@ public class DatabaseConfig {
     public static String getDriver() {
         return properties.getProperty("db.driver");
     }
+
+    public static String getUrlNoDb() {
+        return properties.getProperty("db.url.nodb");
+    }
 } 
