@@ -1,6 +1,6 @@
 package org.example;
 
-import org.example.config.Config;
+import org.example.config.ServerConfig;
 import org.example.server.ExamServer;
 import org.example.util.DatabaseInitializer;
 
@@ -11,7 +11,7 @@ public class Main {
         initializer.initializeDatabase();
 
         // Start the server
-        int port = Config.getServerPort();
+        int port = ServerConfig.getPort();
         ExamServer server = new ExamServer(port);
         server.start();
     }

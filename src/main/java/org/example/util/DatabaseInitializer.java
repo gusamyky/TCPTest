@@ -1,6 +1,6 @@
 package org.example.util;
 
-import org.example.config.Config;
+import org.example.config.ServerConfig;
 import org.example.model.Question;
 import org.example.repository.QuestionRepository;
 
@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class DatabaseInitializer {
-    private static final String QUESTIONS_FILE = Config.getResourcesDir() + "/bazaPytan.txt";
+    private static final String QUESTIONS_FILE = ServerConfig.getResourcesDir() + "/bazaPytan.txt";
     private final QuestionRepository questionRepository;
 
     public DatabaseInitializer() {

@@ -1,6 +1,6 @@
 package org.example.repository.implementations;
 
-import org.example.config.Config;
+import org.example.config.ServerConfig;
 import org.example.model.Question;
 import org.example.repository.interfaces.QuestionRepository;
 
@@ -13,7 +13,7 @@ import java.util.Collections;
 import java.util.List;
 
 public class FileQuestionRepository implements QuestionRepository {
-    private static final String RESOURCES_DIR = Config.getResourcesDir();
+    private static final String RESOURCES_DIR = ServerConfig.getResourcesDir();
     private static final String QUESTIONS_FILE = RESOURCES_DIR + "/bazaPytan.txt";
 
     @Override

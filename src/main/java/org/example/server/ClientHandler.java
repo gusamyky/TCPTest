@@ -1,6 +1,6 @@
 package org.example.server;
 
-import org.example.config.Config;
+import org.example.config.ServerConfig;
 import org.example.model.ExamResult;
 import org.example.model.Question;
 import org.example.model.StudentResponse;
@@ -35,7 +35,7 @@ public class ClientHandler implements Runnable {
         this.questions = questions;
         this.examResultRepository = new ExamResultRepository();
         this.studentResponseRepository = new StudentResponseRepository();
-        this.answerTimeoutSeconds = Config.getAnswerTimeoutSeconds();
+        this.answerTimeoutSeconds = ServerConfig.getAnswerTimeoutSeconds();
         this.executor = Executors.newFixedThreadPool(2);
     }
 

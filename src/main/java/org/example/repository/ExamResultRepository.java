@@ -43,7 +43,7 @@ public class ExamResultRepository {
             while (rs.next()) {
                 results.add(new ExamResult(
                     studentId,
-                    rs.getDouble("score"),
+                    rs.getInt("score"),
                     rs.getInt("total_questions")
                 ));
             }

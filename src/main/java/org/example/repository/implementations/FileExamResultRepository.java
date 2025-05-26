@@ -1,6 +1,6 @@
 package org.example.repository.implementations;
 
-import org.example.config.Config;
+import org.example.config.ServerConfig;
 import org.example.model.ExamResult;
 import org.example.repository.interfaces.ExamResultRepository;
 
@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class FileExamResultRepository implements ExamResultRepository {
-    private static final String DATA_DIR = Config.getDataDir();
+    private static final String DATA_DIR = ServerConfig.getDataDir();
     private static final String RESULTS_FILE = DATA_DIR + "/wyniki.txt";
 
     @Override

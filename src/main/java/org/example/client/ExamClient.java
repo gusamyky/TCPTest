@@ -1,6 +1,6 @@
 package org.example.client;
 
-import org.example.config.Config;
+import org.example.config.ServerConfig;
 import org.example.util.ExamCommands;
 
 import java.io.BufferedReader;
@@ -110,8 +110,8 @@ public class ExamClient {
     }
 
     public static void main(String[] args) {
-        String serverAddress = Config.getServerAddress();
-        int serverPort = Config.getServerPort();
+        String serverAddress = ServerConfig.getAddress();
+        int serverPort = ServerConfig.getPort();
         ExamClient client = new ExamClient(serverAddress, serverPort);
         client.start();
     }
