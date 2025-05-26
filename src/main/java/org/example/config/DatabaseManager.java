@@ -44,11 +44,10 @@ public class DatabaseManager {
 
     private void createDatabaseIfNotExists() throws SQLException {
         try (Connection tempConnection = DriverManager.getConnection(
-                "jdbc:mysql://localhost:3306",
+                DatabaseConfig.getUrlNoDb(),
                 DatabaseConfig.getUser(),
                 DatabaseConfig.getPassword());
              Statement statement = tempConnection.createStatement()) {
-            
             statement.executeUpdate("CREATE DATABASE IF NOT EXISTS tcp_test_db");
         }
     }
