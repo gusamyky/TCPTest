@@ -7,6 +7,19 @@ import java.util.List;
 public class Question implements Serializable {
     private final int id;
     private final String content;
+
+    public String getContent() {
+        return content;
+    }
+
+    public List<String> getOptions() {
+        return options;
+    }
+
+    public List<Integer> getCorrectAnswers() {
+        return correctAnswers;
+    }
+
     private final List<String> options;
     private final List<Integer> correctAnswers;
 

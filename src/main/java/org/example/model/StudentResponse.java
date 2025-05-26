@@ -9,6 +9,19 @@ import java.util.List;
 public class StudentResponse implements Serializable {
     private final String studentId;
     private final int questionId;
+
+    public int getQuestionId() {
+        return questionId;
+    }
+
+    public List<Integer> getSelectedAnswers() {
+        return selectedAnswers;
+    }
+
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
+
     private final List<Integer> selectedAnswers;
     private LocalDateTime timestamp;
 
