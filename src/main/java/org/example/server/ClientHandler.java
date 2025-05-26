@@ -1,12 +1,13 @@
 package org.example.server;
 
-import org.example.config.Config;
+import org.example.config.ServerConfig;
 import org.example.model.ExamResult;
 import org.example.model.Question;
 import org.example.model.StudentResponse;
-import org.example.repository.interfaces.ExamResultRepository;
-import org.example.repository.RepositoryFactory;
-import org.example.repository.interfaces.StudentResponseRepository;
+import org.example.model.Student;
+import org.example.repository.ExamResultRepository;
+import org.example.repository.StudentResponseRepository;
+import org.example.repository.StudentRepository;
 import org.example.util.ExamCommands;
 
 import java.io.BufferedReader;
@@ -32,9 +33,9 @@ public class ClientHandler implements Runnable {
     public ClientHandler(Socket clientSocket, List<Question> questions) {
         this.clientSocket = clientSocket;
         this.questions = questions;
-        this.examResultRepository = RepositoryFactory.getExamResultRepository();
-        this.studentResponseRepository = RepositoryFactory.getStudentResponseRepository();
-        this.answerTimeoutSeconds = Config.getAnswerTimeoutSeconds();
+        this.examResultRepository = new ExamResultRepository();
+        this.studentResponseRepository = new StudentResponseRepository();
+        this.answerTimeoutSeconds = ServerConfig.getAnswerTimeoutSeconds();
         this.executor = Executors.newFixedThreadPool(2);
     }
 
@@ -43,12 +44,23 @@ public class ClientHandler implements Runnable {
         String studentId = null;
         try {
             initializeConnection();
-            studentId = getStudentId();
-            sendWelcomeMessage(studentId);
-            
+            // Ask for album number and name
+            out.println("Podaj swój numer indeksu:");
+            studentId = in.readLine();
+            if (studentId == null || studentId.trim().isEmpty()) {
+                throw new IllegalArgumentException("Invalid student ID");
+            }
+            out.println("Podaj swoje imię i nazwisko:");
+            String studentName = in.readLine();
+            if (studentName == null || studentName.trim().isEmpty()) {
+                throw new IllegalArgumentException("Invalid student name");
+            }
+            // Save student to DB if not exists
+            StudentRepository studentRepository = new StudentRepository();
+            studentRepository.saveIfNotExists(new Student(studentId, studentName));
+            sendWelcomeMessage(studentId, studentName);
             int correctAnswers = processQuestions(studentId);
             sendResults(studentId, correctAnswers);
-
         } catch (IOException e) {
             System.err.println("Error handling client: " + e.getMessage());
         } catch (InterruptedException e) {
@@ -64,17 +76,8 @@ public class ClientHandler implements Runnable {
         in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
     }
 
-    private String getStudentId() throws IOException {
-        out.println("Podaj swój numer indeksu:");
-        String studentId = in.readLine();
-        if (studentId == null || studentId.trim().isEmpty()) {
-            throw new IllegalArgumentException("Invalid student ID");
-        }
-        return studentId;
-    }
-
-    private void sendWelcomeMessage(String studentId) throws IOException {
-        out.println("Witaj, " + studentId + "! Rozpoczynamy test.");
+    private void sendWelcomeMessage(String studentId, String studentName) throws IOException {
+        out.println("Witaj, " + studentName + " (" + studentId + ")! Rozpoczynamy test.");
         out.println("Na każde pytanie masz " + answerTimeoutSeconds + " sekund.");
         out.println("Aby odpowiedzieć na pytanie, wpisz numer(y) odpowiedzi oddzielone przecinkami, np. 1,3");
         out.println("Aby pominąć pytanie, wpisz '" + ExamCommands.SKIP_COMMAND + "'");
@@ -202,7 +205,7 @@ public class ClientHandler implements Runnable {
     private void handleTimeout(String studentId, Question question) {
         try {
             StudentResponse response = new StudentResponse(studentId, question.getId(), new ArrayList<>());
-            studentResponseRepository.save(response);
+            studentResponseRepository.saveStudentResponse(response);
             out.println(ExamCommands.NEXT_QUESTION_COMMAND);
         } catch (Exception e) {
             System.err.println("Error saving timeout response: " + e.getMessage());
@@ -212,7 +215,7 @@ public class ClientHandler implements Runnable {
     private void handleSkippedQuestion(String studentId, Question question) {
         try {
             StudentResponse response = new StudentResponse(studentId, question.getId(), new ArrayList<>());
-            studentResponseRepository.save(response);
+            studentResponseRepository.saveStudentResponse(response);
             out.println(ExamCommands.NEXT_QUESTION_COMMAND);
         } catch (Exception e) {
             System.err.println("Error saving skipped response: " + e.getMessage());
@@ -223,7 +226,7 @@ public class ClientHandler implements Runnable {
         try {
             List<Integer> selectedAnswers = parseAnswers(response);
             StudentResponse studentResponse = new StudentResponse(studentId, question.getId(), selectedAnswers);
-            studentResponseRepository.save(studentResponse);
+            studentResponseRepository.saveStudentResponse(studentResponse);
             return question.isCorrectAnswer(selectedAnswers) ? 1 : 0;
         } catch (Exception e) {
             System.err.println("Error saving student response: " + e.getMessage());
@@ -234,7 +237,7 @@ public class ClientHandler implements Runnable {
     private void sendResults(String studentId, int correctAnswers) {
         try {
             ExamResult result = new ExamResult(studentId, correctAnswers, questions.size());
-            examResultRepository.save(result);
+            examResultRepository.saveExamResult(result);
             out.println(result);
         } catch (Exception e) {
             System.err.println("Error saving exam result: " + e.getMessage());

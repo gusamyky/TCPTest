@@ -44,7 +44,11 @@ public class ExamResult implements Serializable {
     public String getStudentId() {
         return studentId;
     }
-    
+
+    public double getScore() {return score;}
+
+    public int getTotalQuestions(){return  totalQuestions;}
+
     @Override
     public String toString() {
         return String.format("Wynik testu: %d/%d (%.2f%%) poprawnych odpowiedzi", 

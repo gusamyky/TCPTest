@@ -1,9 +1,8 @@
 package org.example.server;
 
-import org.example.config.Config;
+import org.example.config.ServerConfig;
 import org.example.model.Question;
-import org.example.repository.interfaces.QuestionRepository;
-import org.example.repository.RepositoryFactory;
+import org.example.repository.QuestionRepository;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -20,12 +19,12 @@ public class ExamServer {
 
     public ExamServer(int port) {
         this.port = port;
-        int MAX_CLIENTS = Config.getMaxClients();
+        int MAX_CLIENTS = ServerConfig.getMaxClients();
         this.executor = Executors.newFixedThreadPool(MAX_CLIENTS);
         
         try {
-            QuestionRepository questionRepository = RepositoryFactory.getQuestionRepository();
-            this.questions = questionRepository.findAll();
+            QuestionRepository questionRepository = new QuestionRepository();
+            this.questions = questionRepository.getAllQuestions();
         } catch (Exception e) {
             throw new RuntimeException("Failed to load questions: " + e.getMessage(), e);
         }

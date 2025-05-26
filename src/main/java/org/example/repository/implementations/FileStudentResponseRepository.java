@@ -1,6 +1,6 @@
 package org.example.repository.implementations;
 
-import org.example.config.Config;
+import org.example.config.ServerConfig;
 import org.example.model.StudentResponse;
 import org.example.repository.interfaces.StudentResponseRepository;
 
@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class FileStudentResponseRepository implements StudentResponseRepository {
-    private static final String DATA_DIR = Config.getDataDir();
+    private static final String DATA_DIR = ServerConfig.getDataDir();
     private static final String RESPONSES_FILE = DATA_DIR + "/odpowiedzi.txt";
 
     @Override
