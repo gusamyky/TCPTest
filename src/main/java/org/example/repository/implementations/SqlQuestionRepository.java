@@ -1,20 +1,22 @@
-package org.example.repository;
+package org.example.repository.implementations;
 
 import org.example.config.DatabaseManager;
 import org.example.model.Question;
+import org.example.repository.interfaces.QuestionRepository;
 
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class QuestionRepository {
+public class SqlQuestionRepository implements QuestionRepository {
     private final DatabaseManager databaseManager;
 
-    public QuestionRepository() {
+    public SqlQuestionRepository() {
         this.databaseManager = DatabaseManager.getInstance();
     }
 
-    public void saveQuestion(Question question) {
+    @Override
+    public void save(Question question) throws Exception {
         String insertQuestionSQL = "INSERT IGNORE INTO questions (id, content, option1, option2, option3, option4) VALUES (?, ?, ?, ?, ?, ?)";
         String insertAnswerSQL = "INSERT IGNORE INTO correct_answers (question_id, answer_number) VALUES (?, ?)";
 
@@ -37,49 +39,11 @@ public class QuestionRepository {
                 answerStmt.setInt(2, answer);
                 answerStmt.executeUpdate();
             }
-
-        } catch (SQLException e) {
-            throw new RuntimeException("Failed to save question: " + e.getMessage(), e);
         }
     }
 
-    public Question getQuestionById(int id) {
-        String questionSQL = "SELECT * FROM questions WHERE id = ?";
-        String answersSQL = "SELECT answer_number FROM correct_answers WHERE question_id = ? ORDER BY answer_number";
-
-        try (Connection conn = databaseManager.getConnection();
-             PreparedStatement questionStmt = conn.prepareStatement(questionSQL);
-             PreparedStatement answersStmt = conn.prepareStatement(answersSQL)) {
-
-            questionStmt.setInt(1, id);
-            ResultSet questionRs = questionStmt.executeQuery();
-
-            if (!questionRs.next()) {
-                return null;
-            }
-
-            String content = questionRs.getString("content");
-            List<String> options = new ArrayList<>();
-            options.add(questionRs.getString("option1"));
-            options.add(questionRs.getString("option2"));
-            options.add(questionRs.getString("option3"));
-            options.add(questionRs.getString("option4"));
-
-            answersStmt.setInt(1, id);
-            ResultSet answersRs = answersStmt.executeQuery();
-            List<Integer> correctAnswers = new ArrayList<>();
-            while (answersRs.next()) {
-                correctAnswers.add(answersRs.getInt("answer_number"));
-            }
-
-            return new Question(id, content, options, correctAnswers);
-
-        } catch (SQLException e) {
-            throw new RuntimeException("Failed to get question: " + e.getMessage(), e);
-        }
-    }
-
-    public List<Question> getAllQuestions() {
+    @Override
+    public List<Question> findAll() throws Exception {
         List<Question> questions = new ArrayList<>();
         String sql = """
             SELECT q.*, GROUP_CONCAT(ca.answer_number ORDER BY ca.answer_number) as correct_answers 
@@ -112,32 +76,14 @@ public class QuestionRepository {
 
                 questions.add(new Question(id, content, options, correctAnswers));
             }
-
-        } catch (SQLException e) {
-            throw new RuntimeException("Failed to get all questions: " + e.getMessage(), e);
         }
-
         return questions;
     }
 
-    public void deleteQuestion(int id) {
-        String deleteAnswersSQL = "DELETE FROM correct_answers WHERE question_id = ?";
-        String deleteQuestionSQL = "DELETE FROM questions WHERE id = ?";
-
-        try (Connection conn = databaseManager.getConnection();
-             PreparedStatement deleteAnswersStmt = conn.prepareStatement(deleteAnswersSQL);
-             PreparedStatement deleteQuestionStmt = conn.prepareStatement(deleteQuestionSQL)) {
-
-            // Delete correct answers first (due to foreign key constraint)
-            deleteAnswersStmt.setInt(1, id);
-            deleteAnswersStmt.executeUpdate();
-
-            // Delete question
-            deleteQuestionStmt.setInt(1, id);
-            deleteQuestionStmt.executeUpdate();
-
-        } catch (SQLException e) {
-            throw new RuntimeException("Failed to delete question: " + e.getMessage(), e);
+    @Override
+    public void saveAll(List<Question> questions) throws Exception {
+        for (Question question : questions) {
+            save(question);
         }
     }
 } 

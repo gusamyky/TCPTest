@@ -5,9 +5,10 @@ import org.example.model.ExamResult;
 import org.example.model.Question;
 import org.example.model.StudentResponse;
 import org.example.model.Student;
-import org.example.repository.ExamResultRepository;
-import org.example.repository.StudentResponseRepository;
-import org.example.repository.StudentRepository;
+import org.example.repository.RepositoryFactory;
+import org.example.repository.interfaces.ExamResultRepository;
+import org.example.repository.interfaces.StudentResponseRepository;
+import org.example.repository.interfaces.StudentRepository;
 import org.example.util.ExamCommands;
 
 import java.io.BufferedReader;
@@ -33,8 +34,8 @@ public class ClientHandler implements Runnable {
     public ClientHandler(Socket clientSocket, List<Question> questions) {
         this.clientSocket = clientSocket;
         this.questions = questions;
-        this.examResultRepository = new ExamResultRepository();
-        this.studentResponseRepository = new StudentResponseRepository();
+        this.examResultRepository = RepositoryFactory.getExamResultRepository();
+        this.studentResponseRepository = RepositoryFactory.getStudentResponseRepository();
         this.answerTimeoutSeconds = ServerConfig.getAnswerTimeoutSeconds();
         this.executor = Executors.newFixedThreadPool(2);
     }
@@ -56,7 +57,7 @@ public class ClientHandler implements Runnable {
                 throw new IllegalArgumentException("Invalid student name");
             }
             // Save student to DB if not exists
-            StudentRepository studentRepository = new StudentRepository();
+            StudentRepository studentRepository = RepositoryFactory.getStudentRepository();
             studentRepository.saveIfNotExists(new Student(studentId, studentName));
             sendWelcomeMessage(studentId, studentName);
             int correctAnswers = processQuestions(studentId);
@@ -192,7 +193,7 @@ public class ClientHandler implements Runnable {
     private void handleTimeout(String studentId, Question question) {
         try {
             StudentResponse response = new StudentResponse(studentId, question.getId(), new ArrayList<>());
-            studentResponseRepository.saveStudentResponse(response);
+            studentResponseRepository.save(response);
             out.println(ExamCommands.NEXT_QUESTION_COMMAND);
         } catch (Exception e) {
             System.err.println("Error saving timeout response: " + e.getMessage());
@@ -202,7 +203,7 @@ public class ClientHandler implements Runnable {
     private void handleSkippedQuestion(String studentId, Question question) {
         try {
             StudentResponse response = new StudentResponse(studentId, question.getId(), new ArrayList<>());
-            studentResponseRepository.saveStudentResponse(response);
+            studentResponseRepository.save(response);
             out.println(ExamCommands.NEXT_QUESTION_COMMAND);
         } catch (Exception e) {
             System.err.println("Error saving skipped response: " + e.getMessage());
@@ -213,7 +214,7 @@ public class ClientHandler implements Runnable {
         try {
             List<Integer> selectedAnswers = parseAnswers(response);
             StudentResponse studentResponse = new StudentResponse(studentId, question.getId(), selectedAnswers);
-            studentResponseRepository.saveStudentResponse(studentResponse);
+            studentResponseRepository.save(studentResponse);
             return question.isCorrectAnswer(selectedAnswers) ? 1 : 0;
         } catch (Exception e) {
             System.err.println("Error saving student response: " + e.getMessage());
@@ -224,7 +225,7 @@ public class ClientHandler implements Runnable {
     private void sendResults(String studentId, int correctAnswers) {
         try {
             ExamResult result = new ExamResult(studentId, correctAnswers, questions.size());
-            examResultRepository.saveExamResult(result);
+            examResultRepository.save(result);
             out.println(result);
         } catch (Exception e) {
             System.err.println("Error saving exam result: " + e.getMessage());
