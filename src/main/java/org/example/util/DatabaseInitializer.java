@@ -14,7 +14,7 @@ import java.util.List;
 
 public class DatabaseInitializer {
     private static final String QUESTIONS_FILE = ServerConfig.getResourcesDir() + "/bazaPytan.txt";
-    private final SqlQuestionRepository questionRepository;
+    private final QuestionRepository questionRepository;
 
     public DatabaseInitializer() {
         this.questionRepository = new SqlQuestionRepository();
