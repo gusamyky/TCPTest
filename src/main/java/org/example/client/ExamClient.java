@@ -20,6 +20,7 @@ public class ExamClient {
     private BufferedReader in;
     private final ExecutorService executor;
     private volatile boolean isRunning;
+    private volatile boolean canAnswer = true;
 
     public ExamClient(String serverAddress, int serverPort) {
         this.serverAddress = serverAddress;
@@ -39,7 +40,12 @@ public class ExamClient {
             BufferedReader userInput = new BufferedReader(new InputStreamReader(System.in));
             String input;
             while (isRunning && (input = userInput.readLine()) != null) {
-                out.println(input);
+                if (canAnswer) {
+                    out.println(input);
+                } else {
+                    // Ignore input if not allowed (e.g., after timeout)
+                    System.out.println("Odpowiedź została zignorowana (czas minął lub pytanie pominięte).");
+                }
             }
 
         } catch (IOException e) {
@@ -68,8 +74,10 @@ public class ExamClient {
             String response;
             while (isRunning && (response = in.readLine()) != null) {
                 if (response.equals(ExamCommands.TIMEOUT_COMMAND)) {
+                    canAnswer = false;
                     System.out.println("\nCzas na odpowiedź minął! Przechodzimy do następnego pytania.");
                 } else if (response.equals(ExamCommands.NEXT_QUESTION_COMMAND)) {
+                    canAnswer = true;
                     System.out.print("> ");
                 } else if (response.startsWith("Wynik testu:")) {
                     System.out.println(response);

@@ -83,7 +83,14 @@ public class ClientHandler implements Runnable {
         out.println("Aby pominąć pytanie, wpisz '" + ExamCommands.SKIP_COMMAND + "'");
         out.println("Aby zakończyć test wcześniej, wpisz '" + ExamCommands.END_COMMAND + "'");
         out.println("Naciśnij ENTER, aby rozpocząć...");
-        in.readLine();
+        try {
+            clientSocket.setSoTimeout(answerTimeoutSeconds * 1000);
+            in.readLine();
+        } catch (java.net.SocketTimeoutException e) {
+            out.println("Brak odpowiedzi. Rozpoczynamy test.");
+        } finally {
+            clientSocket.setSoTimeout(0); // reset to infinite
+        }
     }
 
     private int processQuestions(String studentId) throws IOException, InterruptedException {
@@ -130,41 +137,21 @@ public class ClientHandler implements Runnable {
         return correctAnswers;
     }
 
-    private String getStudentResponse() throws InterruptedException {
-        CountDownLatch responseLatch = new CountDownLatch(1);
-        AtomicBoolean timeoutOccurred = new AtomicBoolean(false);
-        String[] responseHolder = new String[1];
-        
-        Future<?> inputFuture = executor.submit(() -> {
-            try {
-                String input = in.readLine();
-                if (!timeoutOccurred.get()) {
-                    responseHolder[0] = input;
-                    responseLatch.countDown();
-                }
-                return input;
-            } catch (IOException e) {
-                System.err.println("Error reading student response: " + e.getMessage());
-                return null;
-            }
-        });
-        
-        executor.submit(() -> {
-            try {
-                if (!responseLatch.await(answerTimeoutSeconds, TimeUnit.SECONDS)) {
-                    timeoutOccurred.set(true);
-                    out.println(ExamCommands.TIMEOUT_COMMAND);
-                    inputFuture.cancel(true);
-                    clearPendingInput();
-                    responseLatch.countDown();
-                }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        });
-        
-        responseLatch.await();
-        return responseHolder[0];
+    private String getStudentResponse() {
+        try {
+            clientSocket.setSoTimeout(answerTimeoutSeconds * 1000);
+            String input = in.readLine();
+            return input;
+        } catch (java.net.SocketTimeoutException e) {
+            out.println(ExamCommands.TIMEOUT_COMMAND);
+            clearPendingInput();
+            return null;
+        } catch (IOException e) {
+            System.err.println("Error reading student response: " + e.getMessage());
+            return null;
+        } finally {
+            try { clientSocket.setSoTimeout(0); } catch (IOException ignored) {}
+        }
     }
 
     private boolean isValidResponse(String response) {
