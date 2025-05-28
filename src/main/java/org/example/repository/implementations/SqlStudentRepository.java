@@ -1,20 +1,22 @@
-package org.example.repository;
+package org.example.repository.implementations;
 
-import org.example.config.DatabaseManager;
 import org.example.model.Student;
+import org.example.repository.interfaces.StudentRepository;
+import org.example.config.DatabaseManager;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-public class StudentRepository {
+public class SqlStudentRepository implements StudentRepository {
     private final DatabaseManager databaseManager;
 
-    public StudentRepository() {
+    public SqlStudentRepository() {
         this.databaseManager = DatabaseManager.getInstance();
     }
 
+    @Override
     public boolean existsById(String id) {
         String sql = "SELECT 1 FROM students WHERE id = ?";
         try (Connection conn = databaseManager.getConnection();
@@ -27,6 +29,7 @@ public class StudentRepository {
         }
     }
 
+    @Override
     public void saveIfNotExists(Student student) {
         if (!existsById(student.getId())) {
             String sql = "INSERT INTO students (id, name) VALUES (?, ?)";

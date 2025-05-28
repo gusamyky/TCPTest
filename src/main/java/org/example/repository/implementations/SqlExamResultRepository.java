@@ -1,20 +1,22 @@
-package org.example.repository;
+package org.example.repository.implementations;
 
 import org.example.config.DatabaseManager;
 import org.example.model.ExamResult;
+import org.example.repository.interfaces.ExamResultRepository;
 
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ExamResultRepository {
+public class SqlExamResultRepository implements ExamResultRepository {
     private final DatabaseManager databaseManager;
 
-    public ExamResultRepository() {
+    public SqlExamResultRepository() {
         this.databaseManager = DatabaseManager.getInstance();
     }
 
-    public void saveExamResult(ExamResult result) {
+    @Override
+    public void save(ExamResult result) throws Exception {
         String sql = "INSERT INTO exam_results (student_id, score, total_questions) VALUES (?, ?, ?)";
 
         try (Connection conn = databaseManager.getConnection();
@@ -24,13 +26,11 @@ public class ExamResultRepository {
             stmt.setDouble(2, result.getScore());
             stmt.setInt(3, result.getTotalQuestions());
             stmt.executeUpdate();
-
-        } catch (SQLException e) {
-            throw new RuntimeException("Failed to save exam result: " + e.getMessage(), e);
         }
     }
 
-    public List<ExamResult> getStudentResults(String studentId) {
+    @Override
+    public List<ExamResult> findByStudentId(String studentId) throws Exception {
         String sql = "SELECT * FROM exam_results WHERE student_id = ? ORDER BY submission_time DESC";
         List<ExamResult> results = new ArrayList<>();
 
@@ -47,15 +47,12 @@ public class ExamResultRepository {
                     rs.getInt("total_questions")
                 ));
             }
-
-        } catch (SQLException e) {
-            throw new RuntimeException("Failed to get student results: " + e.getMessage(), e);
         }
-
         return results;
     }
 
-    public List<ExamResult> getAllResults() {
+    @Override
+    public List<ExamResult> findAll() throws Exception {
         String sql = "SELECT * FROM exam_results ORDER BY submission_time DESC";
         List<ExamResult> results = new ArrayList<>();
 
@@ -70,11 +67,7 @@ public class ExamResultRepository {
                     rs.getInt("total_questions")
                 ));
             }
-
-        } catch (SQLException e) {
-            throw new RuntimeException("Failed to get all results: " + e.getMessage(), e);
         }
-
         return results;
     }
 

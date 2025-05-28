@@ -2,7 +2,8 @@ package org.example.util;
 
 import org.example.config.ServerConfig;
 import org.example.model.Question;
-import org.example.repository.QuestionRepository;
+import org.example.repository.implementations.SqlQuestionRepository;
+import org.example.repository.interfaces.QuestionRepository;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -13,21 +14,23 @@ import java.util.List;
 
 public class DatabaseInitializer {
     private static final String QUESTIONS_FILE = ServerConfig.getResourcesDir() + "/bazaPytan.txt";
-    private final QuestionRepository questionRepository;
+    private final SqlQuestionRepository questionRepository;
 
     public DatabaseInitializer() {
-        this.questionRepository = new QuestionRepository();
+        this.questionRepository = new SqlQuestionRepository();
     }
 
     public void initializeDatabase() {
         try {
             List<Question> questions = loadQuestionsFromFile();
             for (Question question : questions) {
-                questionRepository.saveQuestion(question);
+                questionRepository.save(question);
             }
             System.out.println("Successfully loaded " + questions.size() + " questions into the database.");
         } catch (IOException e) {
             throw new RuntimeException("Failed to initialize database from file: " + e.getMessage(), e);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 
