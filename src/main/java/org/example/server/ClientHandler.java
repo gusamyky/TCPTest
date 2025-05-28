@@ -141,7 +141,6 @@ public class ClientHandler implements Runnable {
         try {
             clientSocket.setSoTimeout(answerTimeoutSeconds * 1000);
             String input = in.readLine();
-            clientSocket.setSoTimeout(0); // reset to infinite
             return input;
         } catch (java.net.SocketTimeoutException e) {
             out.println(ExamCommands.TIMEOUT_COMMAND);
